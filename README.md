@@ -84,6 +84,22 @@ This application requires a separate server to handle ADB commands. You are resp
 -   `POST /messaging/create_group`: Accepts `{"group_name": "string", "members": ["list", "of", "strings"]}`.
 -   `POST /messaging/add_members`: Accepts `{"group_name": "string", "members": ["list", "of", "strings"]}`.
 
+#### System Control Endpoints (New)
+-   `GET /system/notifications`: Opens the notification shade.
+-   `GET /system/quick_settings`: Opens the quick settings panel.
+-   `GET /system/sleep`: Puts the device to sleep.
+-   `POST /system/reboot`: Reboots the device.
+-   `POST /system/poweroff`: Powers off the device.
+
+#### Communication Endpoints (New)
+-   `POST /communication/call`: Accepts `{"phone_number": "string"}`.
+-   `POST /communication/sms`: Accepts `{"phone_number": "string", "message": "string"}`.
+
+#### Camera Endpoints (New)
+-   `POST /camera/photo`: Takes a photo with the rear camera.
+-   `POST /camera/selfie`: Takes a photo with the front camera.
+-   `POST /camera/video`: Accepts `{"duration": int}` (in seconds).
+
 Start your ADB MCP server and ensure it is accessible from where you are running the PhoneDriver.
 
 ## Configuration

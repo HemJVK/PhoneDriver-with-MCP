@@ -123,3 +123,39 @@ class AdbMcpClient:
         """
         logging.info(f"Adding members {members} to group '{group_name}'")
         self._send_command("/messaging/add_members", {"group_name": group_name, "members": members})
+
+    # --- System Control Methods ---
+
+    def open_notifications(self):
+        self._send_command("/system/notifications")
+
+    def open_quick_settings(self):
+        self._send_command("/system/quick_settings")
+
+    def sleep(self):
+        self._send_command("/system/sleep")
+
+    def reboot(self):
+        self._send_command("/system/reboot")
+
+    def poweroff(self):
+        self._send_command("/system/poweroff")
+
+    # --- Communication Methods ---
+
+    def make_call(self, phone_number: str):
+        self._send_command("/communication/call", {"phone_number": phone_number})
+
+    def send_sms(self, phone_number: str, message: str):
+        self._send_command("/communication/sms", {"phone_number": phone_number, "message": message})
+
+    # --- Camera Methods ---
+
+    def take_photo(self):
+        self._send_command("/camera/photo")
+
+    def take_selfie(self):
+        self._send_command("/camera/selfie")
+
+    def record_video(self, duration_seconds: int):
+        self._send_command("/camera/video", {"duration": duration_seconds})
