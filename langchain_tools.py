@@ -10,8 +10,8 @@ class TapToolInput(BaseModel):
     y: int = Field(description="The y-coordinate to tap.")
 
 class TapTool(BaseTool):
-    name = "tap"
-    description = "Taps a specific coordinate on the screen."
+    name: str = "tap"
+    description: str = "Taps a specific coordinate on the screen."
     args_schema: Type[BaseModel] = TapToolInput
     adb_client: AdbMcpClient
 
@@ -31,8 +31,8 @@ class SwipeToolInput(BaseModel):
     duration: int = Field(description="The duration of the swipe in milliseconds.")
 
 class SwipeTool(BaseTool):
-    name = "swipe"
-    description = "Swipes from a starting point to an ending point on the screen."
+    name: str = "swipe"
+    description: str = "Swipes from a starting point to an ending point on the screen."
     args_schema: Type[BaseModel] = SwipeToolInput
     adb_client: AdbMcpClient
 
@@ -48,8 +48,8 @@ class TypeToolInput(BaseModel):
     text: str = Field(description="The text to type.")
 
 class TypeTool(BaseTool):
-    name = "type"
-    description = "Types the given text into the currently focused input field."
+    name: str = "type"
+    description: str = "Types the given text into the currently focused input field."
     args_schema: Type[BaseModel] = TypeToolInput
     adb_client: AdbMcpClient
 
@@ -65,8 +65,8 @@ class WaitToolInput(BaseModel):
     milliseconds: int = Field(description="The number of milliseconds to wait.")
 
 class WaitTool(BaseTool):
-    name = "wait"
-    description = "Waits for a specified amount of time."
+    name: str = "wait"
+    description: str = "Waits for a specified amount of time."
     args_schema: Type[BaseModel] = WaitToolInput
 
     def _run(self, milliseconds: int) -> str:
@@ -78,8 +78,8 @@ class TerminateToolInput(BaseModel):
     message: str = Field(description="The final message to report.")
 
 class TerminateTool(BaseTool):
-    name = "terminate"
-    description = "Terminates the task and provides a final message."
+    name: str = "terminate"
+    description: str = "Terminates the task and provides a final message."
     args_schema: Type[BaseModel] = TerminateToolInput
 
     def _run(self, message: str) -> str:

@@ -3,15 +3,14 @@ import base64
 import logging
 from typing import List, Dict, Any, Optional
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage
 from langchain.tools import BaseTool
-from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_groq import ChatGroq
+from langgraph.prebuilt import create_react_agent
 
 class GroqAgent:
     """
-    An agent that uses Groq's cloud-based LLM to decide on actions
+    An agent that uses Groq's cloud-based LLM and LangGraph to decide on actions
     based on a screenshot and a user request.
     """
 
@@ -33,30 +32,8 @@ class GroqAgent:
             api_key=api_key
         )
         self.tools = tools
-        self.agent_executor = self._create_agent_executor()
-        logging.info(f"GroqAgent initialized with model: {model_name}")
-
-    def _create_agent_executor(self) -> AgentExecutor:
-        """
-        Creates the LangChain agent and executor.
-        """
-        system_prompt = """
-        You are an expert at controlling a smartphone.
-        You are given a user's request and a screenshot of the current screen.
-        Your goal is to decide the next action to take to fulfill the user's request.
-        Analyze the screenshot and the request carefully.
-        Choose one of the available tools to perform the next action.
-        If the task is complete, use the 'terminate' tool.
-        """
-
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            MessagesPlaceholder(variable_name="messages"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ])
-
-        agent = create_tool_calling_agent(self.llm, self.tools, prompt)
-        return AgentExecutor(agent=agent, tools=self.tools, verbose=True)
+        self.agent_executor = create_react_agent(self.llm, self.tools)
+        logging.info(f"GroqAgent initialized with model: {model_name} and LangGraph.")
 
     @staticmethod
     def _encode_image(image_path: str) -> str:
@@ -83,7 +60,7 @@ class GroqAgent:
         context: Optional[Dict[str, Any]] = None
     ) -> Optional[Dict[str, Any]]:
         """
-        Analyzes a screenshot and decides on the next action.
+        Analyzes a screenshot and decides on the next action using the LangGraph agent.
 
         Args:
             screenshot_path: The path to the screenshot.
@@ -101,46 +78,55 @@ class GroqAgent:
 
         history_str = "No previous actions."
         if context and context.get('previous_actions'):
-            actions = [f"- {a['action']}" for a in context['previous_actions']]
+            actions = [f"- {a['action']}({a.get('args', '')})" for a in context['previous_actions']]
             history_str = "Previous actions:\n" + "\n".join(actions)
 
+        prompt_text = f"""
+        You are an expert at controlling a smartphone.
+        Your goal is to fulfill the user's request: "{user_request}".
+
+        {history_str}
+
+        Analyze the current screenshot and decide the single next best action to take.
+        Choose one of the available tools. If the task is complete, use the 'terminate' tool.
+        """
+
         content = [
-            {
-                "type": "text",
-                "text": f"User Request: {user_request}\n\n{history_str}\n\nAnalyze the screen and decide the next action."
-            },
+            {"type": "text", "text": prompt_text},
             {
                 "type": "image_url",
-                "image_url": {
-                    "url": f"data:image/png;base64,{base64_image}"
-                }
-            }
+                "image_url": {"url": f"data:image/png;base64,{base64_image}"},
+            },
         ]
 
         messages = [HumanMessage(content=content)]
 
         try:
-            logging.info("Invoking Groq agent...")
-            result = self.agent_executor.invoke({"messages": messages})
+            logging.info("Invoking LangGraph agent...")
+            # The create_react_agent expects a dictionary with a 'messages' key
+            inputs = {"messages": messages}
 
-            # The output from a tool-calling agent is a list of tool calls
-            if "output" in result and isinstance(result["output"], str):
-                # This could be the direct output of the tool
-                # We need to find which tool was called from the intermediate steps
-                tool_calls = result.get("intermediate_steps", [])
-                if tool_calls:
-                    # Get the last tool call
-                    last_tool_call = tool_calls[-1][0]
-                    action = {
-                        "action": last_tool_call.tool,
-                        "args": last_tool_call.tool_input,
-                        "reasoning": result.get("output", "No reasoning provided.")
-                    }
-                    return action
+            # Stream the events to get the final result
+            last_action = None
+            for event in self.agent_executor.stream(inputs):
+                if "actions" in event:
+                    for action in event["actions"]:
+                        last_action = {
+                            "action": action.tool,
+                            "args": action.tool_input,
+                            "reasoning": f"Agent decided to use {action.tool}."
+                        }
+                        # We only want the first action decided by the agent in each cycle
+                        break
+                if last_action:
+                    break # Exit after the first action is found
 
-            logging.warning("Agent did not produce a clear tool call.")
-            return None
+            if last_action:
+                return last_action
+            else:
+                logging.warning("Agent did not produce a tool call.")
+                return None
 
         except Exception as e:
-            logging.error(f"Error invoking Groq agent: {e}", exc_info=True)
+            logging.error(f"Error invoking LangGraph agent: {e}", exc_info=True)
             return None

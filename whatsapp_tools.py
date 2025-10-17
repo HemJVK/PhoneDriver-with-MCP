@@ -9,8 +9,8 @@ class SendWhatsAppMessageInput(BaseModel):
     message: str = Field(description="The content of the message to send.")
 
 class SendWhatsAppMessageTool(BaseTool):
-    name = "send_whatsapp_message"
-    description = "Sends a message to a specified user or group in WhatsApp."
+    name: str = "send_whatsapp_message"
+    description: str = "Sends a message to a specified user or group in WhatsApp."
     args_schema: Type[BaseModel] = SendWhatsAppMessageInput
     adb_client: AdbMcpClient
 
@@ -27,8 +27,8 @@ class CreateWhatsAppGroupInput(BaseModel):
     members: List[str] = Field(description="A list of contact names to add to the group.")
 
 class CreateWhatsAppGroupTool(BaseTool):
-    name = "create_whatsapp_group"
-    description = "Creates a new WhatsApp group with a given name and initial members."
+    name: str = "create_whatsapp_group"
+    description: str = "Creates a new WhatsApp group with a given name and initial members."
     args_schema: Type[BaseModel] = CreateWhatsAppGroupInput
     adb_client: AdbMcpClient
 
@@ -45,8 +45,8 @@ class AddMembersToGroupInput(BaseModel):
     members: List[str] = Field(description="A list of contact names to add.")
 
 class AddMembersToGroupTool(BaseTool):
-    name = "add_members_to_whatsapp_group"
-    description = "Adds new members to an existing WhatsApp group."
+    name: str = "add_members_to_whatsapp_group"
+    description: str = "Adds new members to an existing WhatsApp group."
     args_schema: Type[BaseModel] = AddMembersToGroupInput
     adb_client: AdbMcpClient
 
