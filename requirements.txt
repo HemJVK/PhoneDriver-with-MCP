@@ -3,4 +3,4 @@ langchain-groq
 pydantic
 requests
 pillow
-gradio
+streamlit
