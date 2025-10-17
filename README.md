@@ -79,10 +79,10 @@ This application requires a separate server to handle ADB commands. You are resp
 -   `POST /swipe`: Accepts `{"start_x": int, "start_y": int, "end_x": int, "end_y": int, "duration": int}`.
 -   `POST /type`: Accepts `{"text": "string"}` to type text.
 
-#### WhatsApp Endpoints (New)
--   `POST /whatsapp/send_message`: Accepts `{"recipient": "string", "message": "string"}`.
--   `POST /whatsapp/create_group`: Accepts `{"group_name": "string", "members": ["list", "of", "strings"]}`.
--   `POST /whatsapp/add_members`: Accepts `{"group_name": "string", "members": ["list", "of", "strings"]}`.
+#### Generic Messaging Endpoints (New)
+-   `POST /messaging/send`: Accepts `{"recipient": "string", "message": "string"}`.
+-   `POST /messaging/create_group`: Accepts `{"group_name": "string", "members": ["list", "of", "strings"]}`.
+-   `POST /messaging/add_members`: Accepts `{"group_name": "string", "members": ["list", "of", "strings"]}`.
 
 Start your ADB MCP server and ensure it is accessible from where you are running the PhoneDriver.
 

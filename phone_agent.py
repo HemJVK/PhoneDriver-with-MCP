@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional, List
 from adb_mcp_client import AdbMcpClient
 from groq_agent import GroqAgent
 from langchain_tools import TapTool, SwipeTool, TypeTool, WaitTool, TerminateTool
-from whatsapp_tools import SendWhatsAppMessageTool, CreateWhatsAppGroupTool, AddMembersToGroupTool
+from messaging_tools import SendMessageTool, CreateGroupTool, AddMembersToGroupTool
 from langchain.tools import BaseTool
 
 class PhoneAgent:
@@ -78,12 +78,12 @@ class PhoneAgent:
             WaitTool(),
             TerminateTool(),
         ]
-        whatsapp_tools = [
-            SendWhatsAppMessageTool(adb_client=self.adb_client),
-            CreateWhatsAppGroupTool(adb_client=self.adb_client),
+        messaging_tools = [
+            SendMessageTool(adb_client=self.adb_client),
+            CreateGroupTool(adb_client=self.adb_client),
             AddMembersToGroupTool(adb_client=self.adb_client),
         ]
-        return low_level_tools + whatsapp_tools
+        return low_level_tools + messaging_tools
 
     def execute_cycle(self, user_request: str) -> Dict[str, Any]:
         """

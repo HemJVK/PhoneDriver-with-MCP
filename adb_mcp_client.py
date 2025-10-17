@@ -89,37 +89,37 @@ class AdbMcpClient:
         """
         self._send_command("/type", {"text": text})
 
-    # --- WhatsApp Specific Methods ---
+    # --- Generic Messaging Methods ---
 
-    def send_whatsapp_message(self, recipient: str, message: str):
+    def send_message(self, recipient: str, message: str):
         """
-        Sends a WhatsApp message to a recipient (user or group).
+        Sends a message to a recipient (user or group) in the current app.
 
         Args:
             recipient: The name of the user or group to send the message to.
             message: The message content.
         """
-        logging.info(f"Sending WhatsApp message to '{recipient}'...")
-        self._send_command("/whatsapp/send_message", {"recipient": recipient, "message": message})
+        logging.info(f"Sending message to '{recipient}'...")
+        self._send_command("/messaging/send", {"recipient": recipient, "message": message})
 
-    def create_whatsapp_group(self, group_name: str, members: list[str]):
+    def create_group(self, group_name: str, members: list[str]):
         """
-        Creates a new WhatsApp group.
+        Creates a new group in the current messaging app.
 
         Args:
             group_name: The name for the new group.
             members: A list of contact names to add to the group initially.
         """
-        logging.info(f"Creating WhatsApp group '{group_name}' with members: {members}")
-        self._send_command("/whatsapp/create_group", {"group_name": group_name, "members": members})
+        logging.info(f"Creating group '{group_name}' with members: {members}")
+        self._send_command("/messaging/create_group", {"group_name": group_name, "members": members})
 
-    def add_members_to_whatsapp_group(self, group_name: str, members: list[str]):
+    def add_members_to_group(self, group_name: str, members: list[str]):
         """
-        Adds members to an existing WhatsApp group.
+        Adds members to an existing group in the current messaging app.
 
         Args:
             group_name: The name of the group to add members to.
             members: A list of contact names to add.
         """
-        logging.info(f"Adding members {members} to WhatsApp group '{group_name}'")
-        self._send_command("/whatsapp/add_members", {"group_name": group_name, "members": members})
+        logging.info(f"Adding members {members} to group '{group_name}'")
+        self._send_command("/messaging/add_members", {"group_name": group_name, "members": members})
