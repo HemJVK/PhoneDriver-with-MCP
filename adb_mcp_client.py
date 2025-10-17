@@ -88,3 +88,38 @@ class AdbMcpClient:
             text: The text to type.
         """
         self._send_command("/type", {"text": text})
+
+    # --- WhatsApp Specific Methods ---
+
+    def send_whatsapp_message(self, recipient: str, message: str):
+        """
+        Sends a WhatsApp message to a recipient (user or group).
+
+        Args:
+            recipient: The name of the user or group to send the message to.
+            message: The message content.
+        """
+        logging.info(f"Sending WhatsApp message to '{recipient}'...")
+        self._send_command("/whatsapp/send_message", {"recipient": recipient, "message": message})
+
+    def create_whatsapp_group(self, group_name: str, members: list[str]):
+        """
+        Creates a new WhatsApp group.
+
+        Args:
+            group_name: The name for the new group.
+            members: A list of contact names to add to the group initially.
+        """
+        logging.info(f"Creating WhatsApp group '{group_name}' with members: {members}")
+        self._send_command("/whatsapp/create_group", {"group_name": group_name, "members": members})
+
+    def add_members_to_whatsapp_group(self, group_name: str, members: list[str]):
+        """
+        Adds members to an existing WhatsApp group.
+
+        Args:
+            group_name: The name of the group to add members to.
+            members: A list of contact names to add.
+        """
+        logging.info(f"Adding members {members} to WhatsApp group '{group_name}'")
+        self._send_command("/whatsapp/add_members", {"group_name": group_name, "members": members})
