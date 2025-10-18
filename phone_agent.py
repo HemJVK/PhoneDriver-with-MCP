@@ -8,7 +8,6 @@ from typing import Dict, Any, Optional, List
 
 from adb_mcp_client import AdbMcpClient
 from groq_agent import GroqAgent
-import streamlit as st
 from langchain_tools import TapTool, SwipeTool, TypeTool, WaitTool, TerminateTool
 from messaging_tools import SendMessageTool, CreateGroupTool, AddMembersToGroupTool
 from system_tools import OpenNotificationShadeTool, OpenQuickSettingsTool, SleepTool, RebootTool, PoweroffTool
@@ -132,16 +131,6 @@ class PhoneAgent:
             tool_to_execute = next((t for t in self.tools if t.name == action["action"]), None)
             if not tool_to_execute:
                 raise ValueError(f"Unknown action type: {action['action']}")
-
-            # Confirmation for dangerous actions
-            if action["action"] in ["reboot_device", "poweroff_device"]:
-                st.warning(f"The agent wants to {action['action']}. Please confirm.")
-                if not st.button(f"Confirm {action['action']}"):
-                    return {
-                        "success": False,
-                        "error": "Action was not confirmed by the user.",
-                        "task_complete": False,
-                    }
 
             result = tool_to_execute.run(action["args"])
             logging.info(f"Tool execution result: {result}")

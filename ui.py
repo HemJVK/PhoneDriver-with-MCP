@@ -166,7 +166,13 @@ def render_main_content(config, max_cycles):
     with col2:
         st.subheader("Execution Log")
         log_placeholder = st.empty()
-        log_placeholder.text_area("", value="\n".join(st.session_state.logs), height=400, key="log_area")
+        log_placeholder.text_area(
+            "log_output",
+            value="\n".join(st.session_state.logs),
+            height=400,
+            key="log_area",
+            label_visibility="collapsed"
+        )
 
 # --- Main App ---
 def main():
