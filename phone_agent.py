@@ -125,19 +125,21 @@ class PhoneAgent:
             if not action:
                 raise Exception("Failed to get a valid action from the agent.")
 
-            logging.info(f"Agent decided to perform: {action['action']} with args: {action.get('args')}")
-            logging.info(f"Reasoning: {action.get('reasoning')}")
+            logging.info(f"--- Agent Reasoning ---\n{action.get('reasoning', 'No reasoning provided.')}\n--------------------")
+            logging.info(f"Action: {action['action']}")
+            logging.info(f"Arguments: {action.get('args')}")
 
             tool_to_execute = next((t for t in self.tools if t.name == action["action"]), None)
             if not tool_to_execute:
                 raise ValueError(f"Unknown action type: {action['action']}")
 
             result = tool_to_execute.run(action["args"])
-            logging.info(f"Tool execution result: {result}")
+            logging.info(f"Tool Result: {result}")
 
             self.context["previous_actions"].append({
                 "action": action["action"],
                 "args": action.get("args"),
+                "reasoning": action.get('reasoning'),
                 "timestamp": time.time(),
             })
 

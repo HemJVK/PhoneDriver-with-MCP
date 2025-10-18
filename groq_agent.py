@@ -106,23 +106,39 @@ class GroqAgent:
             # The create_react_agent expects a dictionary with a 'messages' key
             inputs = {"messages": messages}
 
-            # Stream the events to get the final result
-            last_action = None
-            for event in self.agent_executor.stream(inputs):
-                if "actions" in event:
-                    for action in event["actions"]:
-                        last_action = {
-                            "action": action.tool,
-                            "args": action.tool_input,
-                            "reasoning": f"Agent decided to use {action.tool}."
-                        }
-                        # We only want the first action decided by the agent in each cycle
-                        break
-                if last_action:
-                    break # Exit after the first action is found
+            action_to_return = None
+            reasoning = "No reasoning captured."
 
-            if last_action:
-                return last_action
+            # The default stream mode gives events as they happen from each node
+            for event in self.agent_executor.stream(inputs):
+                # The 'agent' node is where the LLM makes its decision
+                if "agent" in event:
+                    agent_output = event["agent"]
+                    # The agent's output is a dictionary, typically with a 'messages' key
+                    if "messages" in agent_output:
+                        # The message from the agent contains the thought and the action
+                        for message in agent_output["messages"]:
+                            if message.content:
+                                reasoning = message.content.strip()
+
+                            if message.tool_calls:
+                                # Get the first tool call
+                                tool_call = message.tool_calls[0]
+                                action_to_return = {
+                                    "action": tool_call['name'],
+                                    "args": tool_call['args'],
+                                    "reasoning": reasoning
+                                }
+                                # We've found the action, we can stop processing this event
+                                break
+
+                # If we've found an action, we can exit the stream
+                if action_to_return:
+                    break
+
+            if action_to_return:
+                logging.info(f"Agent Reasoning: {action_to_return['reasoning']}")
+                return action_to_return
             else:
                 logging.warning("Agent did not produce a tool call.")
                 return None
