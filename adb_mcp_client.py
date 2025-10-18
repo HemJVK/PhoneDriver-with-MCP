@@ -159,3 +159,13 @@ class AdbMcpClient:
 
     def record_video(self, duration_seconds: int):
         self._send_command("/camera/video", {"duration": duration_seconds})
+
+    def get_device_config(self) -> Dict[str, Any]:
+        """
+        Retrieves the connected device's configuration from the server.
+
+        Returns:
+            A dictionary containing the device's configuration details.
+        """
+        logging.info("Fetching device configuration from server...")
+        return self._send_command("/device/config")

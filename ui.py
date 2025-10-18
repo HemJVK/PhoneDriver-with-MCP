@@ -6,6 +6,7 @@ from threading import Thread
 import streamlit as st
 from PIL import Image
 
+from adb_mcp_client import AdbMcpClient
 from phone_agent import PhoneAgent
 
 # --- State Management ---
@@ -100,6 +101,16 @@ def render_sidebar():
         "ADB MCP Server Address",
         value=config.get("adb_server_address", "http://localhost:8080")
     )
+
+    if st.sidebar.button("Check Connection", use_container_width=True):
+        try:
+            client = AdbMcpClient(server_address=adb_server)
+            device_config = client.get_device_config()
+            st.sidebar.success("Connection Successful!")
+            st.sidebar.json(device_config)
+        except Exception as e:
+            st.sidebar.error(f"Connection Failed: {e}")
+
     max_cycles = st.sidebar.number_input("Max Cycles per Task", min_value=1, max_value=50, value=15)
 
     return {

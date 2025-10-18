@@ -100,6 +100,9 @@ This application requires a separate server to handle ADB commands. You are resp
 -   `POST /camera/selfie`: Takes a photo with the front camera.
 -   `POST /camera/video`: Accepts `{"duration": int}` (in seconds).
 
+#### Device Endpoints (New)
+-   `GET /device/config`: Retrieves the configuration of the connected device. Expected successful response: `{"device_id": "...", "screen_width": 1080, "screen_height": 2340}`.
+
 Start your ADB MCP server and ensure it is accessible from where you are running the PhoneDriver.
 
 ## Configuration
