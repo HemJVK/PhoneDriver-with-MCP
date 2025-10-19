@@ -3,7 +3,7 @@ from langchain_groq import ChatGroq
 from langgraph.prebuilt import create_react_agent
 from langchain_core.prompts import ChatPromptTemplate
 from typing import List
-from langchain.agents import Tool
+from langchain_core.tools import Tool
 
 from adb_controller import AdbController
 from langchain_tools import get_adb_tools, python_repl_tool
