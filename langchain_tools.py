@@ -1,8 +1,32 @@
+import subprocess
+import sys
 from langchain_core.tools import tool
-from langchain_experimental.tools import PythonREPLTool
 from typing import List
 
 from adb_controller import AdbController
+
+@tool
+def python_repl(code: str) -> str:
+    """
+    A Python REPL tool. Use this to execute python code.
+    Input should be a valid python code string.
+    The tool will return the output of the code, including any errors.
+    """
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=30 # Add a timeout for safety
+        )
+        return f"Execution successful:\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+    except subprocess.CalledProcessError as e:
+        return f"Execution failed with return code {e.returncode}:\nstdout:\n{e.stdout}\nstderr:\n{e.stderr}"
+    except subprocess.TimeoutExpired:
+        return "Execution timed out after 30 seconds."
+    except Exception as e:
+        return f"An unexpected error occurred: {e}"
 
 def get_adb_tools(adb_controller: AdbController) -> List:
     """Factory function to create ADB tools with a given controller."""
@@ -68,6 +92,3 @@ def get_adb_tools(adb_controller: AdbController) -> List:
         system_command,
         take_photo,
     ]
-
-# The Python REPL tool does not depend on the ADB controller, so it can be defined separately.
-python_repl_tool = PythonREPLTool()
