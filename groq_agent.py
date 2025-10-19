@@ -3,7 +3,7 @@ from langchain_groq import ChatGroq
 from langgraph.prebuilt import create_react_agent
 from typing import List
 from langchain_core.tools import Tool
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 
 from adb_controller import AdbController
 from langchain_tools import get_adb_tools
@@ -17,20 +17,8 @@ class GroqAgent:
         self.logger = logging.getLogger(__name__)
         self.adb_controller = AdbController(device_id)
 
-        # Define the system prompt with the screen resolution
-        system_prompt = (
-            "You are a helpful assistant that can control a phone. "
-            "You have access to a set of tools to interact with the device. "
-            "The screen resolution is {width}x{height}. "
-            "When using the 'tap' tool, you must provide coordinates within these bounds. "
-            "Always consider the user's request and the history of previous actions to decide on the next step. "
-            "When the task is complete, use your own words to summarize what you did and why."
-        ).format(width=self.adb_controller.width, height=self.adb_controller.height)
-
-        # Bind the system message to the model
-        self.model = ChatGroq(api_key=api_key, model_name=model_name).bind_messages(
-            [SystemMessage(content=system_prompt)]
-        )
+        # The model is initialized cleanly, without any binding.
+        self.model = ChatGroq(api_key=api_key, model_name=model_name)
 
         self.tools = self._load_tools()
         self.agent_executor = self._create_agent_executor()
@@ -43,7 +31,7 @@ class GroqAgent:
 
     def _create_agent_executor(self):
         """
-        Creates the agent executor using LangGraph. The system prompt is now bound to the model.
+        Creates the agent executor using LangGraph. The system prompt will be passed with each invocation.
         """
         return create_react_agent(self.model, self.tools)
 
@@ -53,7 +41,23 @@ class GroqAgent:
         """
         self.logger.info(f"Starting task: {user_request}")
 
-        response = self.agent_executor.invoke({"messages": [("human", user_request)]})
+        # Define the system prompt with the screen resolution
+        system_prompt = (
+            "You are a helpful assistant that can control a phone. "
+            "You have access to a set of tools to interact with the device. "
+            "The screen resolution is {width}x{height}. "
+            "When using the 'tap' tool, you must provide coordinates within these bounds. "
+            "Always consider the user's request and the history of previous actions to decide on the next step. "
+            "When the task is complete, use your own words to summarize what you did and why."
+        ).format(width=self.adb_controller.width, height=self.adb_controller.height)
+
+        # The correct way is to pass the system message as the first message in the list.
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_request)
+        ]
+
+        response = self.agent_executor.invoke({"messages": messages})
 
         final_output = response["messages"][-1].content
         self.logger.info(f"Task finished. Final output: {final_output}")
