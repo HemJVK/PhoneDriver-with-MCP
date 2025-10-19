@@ -2,6 +2,7 @@ import os
 import json
 import logging
 from groq_agent import GroqAgent
+from dotenv import load_dotenv
 
 class PhoneAgent:
     """
@@ -14,11 +15,15 @@ class PhoneAgent:
         if config is None:
             config = {}
 
+        # Load environment variables from .env file
+        load_dotenv()
+
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
         groq_api_key = os.environ.get("GROQ_API_KEY")
         if not groq_api_key:
-            raise ValueError("GROQ_API_KEY environment variable not set.")
+            # The error is now more informative.
+            raise ValueError("GROQ_API_KEY not found. Please create a .env file in the root directory and add GROQ_API_KEY='your_api_key'.")
 
         device_id = config.get('device_id')
 
@@ -46,12 +51,17 @@ def main():
         with open('config.json', 'r') as f:
             config = json.load(f)
     
-    agent = PhoneAgent(config)
-    result = agent.execute_task(task)
-    
-    print("\n----- Task Complete -----")
-    print(f"Final Result: {result}")
-    print("-------------------------")
+    try:
+        agent = PhoneAgent(config)
+        result = agent.execute_task(task)
+
+        print("\n----- Task Complete -----")
+        print(f"Final Result: {result}")
+        print("-------------------------")
+    except ValueError as e:
+        print(f"Error: {e}")
+        # Add a hint for the user
+        print("Please make sure you have a .env file with your GROQ_API_KEY.")
 
 if __name__ == "__main__":
     main()
