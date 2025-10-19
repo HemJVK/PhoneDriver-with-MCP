@@ -1,7 +1,6 @@
 import logging
 from langchain_groq import ChatGroq
 from langgraph.prebuilt import create_react_agent
-from langchain_core.prompts import ChatPromptTemplate
 from typing import List
 from langchain_core.tools import Tool
 from langchain_core.messages import SystemMessage
@@ -16,8 +15,23 @@ class GroqAgent:
 
     def __init__(self, api_key: str, device_id: str = None, model_name: str = "llama3-70b-8192"):
         self.logger = logging.getLogger(__name__)
-        self.model = ChatGroq(api_key=api_key, model_name=model_name)
         self.adb_controller = AdbController(device_id)
+
+        # Define the system prompt with the screen resolution
+        system_prompt = (
+            "You are a helpful assistant that can control a phone. "
+            "You have access to a set of tools to interact with the device. "
+            "The screen resolution is {width}x{height}. "
+            "When using the 'tap' tool, you must provide coordinates within these bounds. "
+            "Always consider the user's request and the history of previous actions to decide on the next step. "
+            "When the task is complete, use your own words to summarize what you did and why."
+        ).format(width=self.adb_controller.width, height=self.adb_controller.height)
+
+        # Bind the system message to the model
+        self.model = ChatGroq(api_key=api_key, model_name=model_name).bind_messages(
+            [SystemMessage(content=system_prompt)]
+        )
+
         self.tools = self._load_tools()
         self.agent_executor = self._create_agent_executor()
 
@@ -29,23 +43,9 @@ class GroqAgent:
 
     def _create_agent_executor(self):
         """
-        Creates the agent executor using LangGraph, including a custom system prompt.
+        Creates the agent executor using LangGraph. The system prompt is now bound to the model.
         """
-        # The new API requires passing the system message directly.
-        system_prompt = (
-            "You are a helpful assistant that can control a phone. "
-            "You have access to a set of tools to interact with the device. "
-            "The screen resolution is {width}x{height}. "
-            "When using the 'tap' tool, you must provide coordinates within these bounds. "
-            "Always consider the user's request and the history of previous actions to decide on the next step. "
-            "When the task is complete, use your own words to summarize what you did and why."
-        ).format(width=self.adb_controller.width, height=self.adb_controller.height)
-
-        return create_react_agent(
-            self.model,
-            self.tools,
-            system_message=system_prompt
-        )
+        return create_react_agent(self.model, self.tools)
 
     def run_task(self, user_request: str):
         """
