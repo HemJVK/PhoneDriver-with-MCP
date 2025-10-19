@@ -91,4 +91,5 @@ def get_adb_tools(adb_controller: AdbController) -> List:
         send_message,
         system_command,
         take_photo,
+        python_repl, # Add the custom REPL tool here
     ]

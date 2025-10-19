@@ -6,7 +6,7 @@ from typing import List
 from langchain_core.tools import Tool
 
 from adb_controller import AdbController
-from langchain_tools import get_adb_tools, python_repl
+from langchain_tools import get_adb_tools
 
 class GroqAgent:
     """
@@ -24,9 +24,8 @@ class GroqAgent:
         """
         Loads the tools that the agent can use using the factory function.
         """
-        adb_tools = get_adb_tools(self.adb_controller)
-        # Combine the ADB tools with the Python REPL tool
-        return adb_tools + [python_repl]
+        # The factory function now returns all tools, including the python_repl.
+        return get_adb_tools(self.adb_controller)
 
     def _create_agent_executor(self):
         """
