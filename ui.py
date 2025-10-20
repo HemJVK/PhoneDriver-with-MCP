@@ -97,7 +97,7 @@ def create_ui():
         )
         
         # Correct way to schedule periodic updates in Gradio
-        gr.Timer(1, every=None).tick(
+        gr.Timer(1).tick(
             fn=get_logs,
             outputs=log_output,
         )
