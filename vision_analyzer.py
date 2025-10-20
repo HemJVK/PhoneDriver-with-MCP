@@ -1,7 +1,7 @@
 import logging
 import torch
 from PIL import Image
-from transformers import AutoProcessor, AutoModelForCausalLM
+from transformers import AutoProcessor, AutoModel # Use the general AutoModel class
 
 class VisionAnalyzer:
     """
@@ -13,7 +13,8 @@ class VisionAnalyzer:
         self.logger.info(f"Initializing VisionAnalyzer with SmolVLM on device: {self.device}")
 
         self.processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-        self.model = AutoModelForCausalLM.from_pretrained(
+        # Use AutoModel instead of AutoModelForCausalLM for this architecture
+        self.model = AutoModel.from_pretrained(
             model_name,
             torch_dtype=torch.float16,
             low_cpu_mem_usage=True,
@@ -35,7 +36,6 @@ class VisionAnalyzer:
         try:
             raw_image = Image.open(screenshot_path)
 
-            # The correct format for this model is to pass text and images to the processor separately.
             inputs = self.processor(
                 text=self.base_prompt,
                 images=raw_image,
@@ -44,7 +44,6 @@ class VisionAnalyzer:
 
             output = self.model.generate(**inputs, max_new_tokens=1024, do_sample=False)
 
-            # The output does not need complex slicing if the prompt isn't included in the input text.
             description = self.processor.batch_decode(output, skip_special_tokens=True)[0]
 
             self.logger.info(f"Screen description generated: {description}")
