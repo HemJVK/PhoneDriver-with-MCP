@@ -9,42 +9,48 @@ from adb_controller import AdbController
 # --- Logging Setup ---
 class UILogHandler(logging.Handler):
     """A logging handler that writes logs to a Streamlit UI element."""
-    def __init__(self, container):
+    def __init__(self):
         super().__init__()
-        self.container = container
+        self.container = None
         self.buffer = []
+
+    def set_container(self, container):
+        """Sets the Streamlit container to write logs to."""
+        self.container = container
+        # Write any buffered logs
+        if self.container:
+            self.container.code("\n".join(self.buffer), language="log")
 
     def emit(self, record):
         log_entry = self.format(record)
         self.buffer.append(log_entry)
-        self.container.code("\n".join(self.buffer))
+        if self.container:
+            self.container.code("\n".join(self.buffer), language="log")
 
-def setup_logging(container):
-    """Sets up a logger to stream to the UI."""
+def setup_logging():
+    """Sets up a logger and returns the handler."""
     root_logger = logging.getLogger()
-    # Clear any existing handlers
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
 
-    log_handler = UILogHandler(container)
+    log_handler = UILogHandler()
     log_handler.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     log_handler.setFormatter(formatter)
     root_logger.addHandler(log_handler)
     root_logger.setLevel(logging.INFO)
+    return log_handler
+
+# Initialize logger right away
+log_handler = setup_logging()
 
 # --- Config Management ---
 def load_config():
     """Loads config.json or returns a default."""
-    default_config = {
-        "device_id": None,
-        # Add LLM temp to config
-        "temperature": 0.1
-    }
+    default_config = { "device_id": None, "temperature": 0.1 }
     try:
         with open('config.json', 'r') as f:
             config = json.load(f)
-            # Ensure all keys from default are present
             for key, value in default_config.items():
                 config.setdefault(key, value)
             return config
@@ -90,15 +96,13 @@ with config_tab:
         max_value=1.0,
         value=st.session_state.config.get("temperature", 0.1),
         step=0.05,
-        help="Controls the randomness of the LLM's responses. Lower is more deterministic."
     )
     st.session_state.config["temperature"] = temp
 
     if st.button("Save Configuration"):
         save_config(st.session_state.config)
         st.success("Configuration saved successfully!")
-        # Clear the agent to force re-initialization with new settings
-        st.session_state.agent = None
+        st.session_state.agent = None # Force re-initialization
 
 # --- Query Tab ---
 with query_tab:
@@ -110,14 +114,15 @@ with query_tab:
 
     st.subheader("Agent Logs")
     log_container = st.empty()
-    log_box = log_container.code("Logs will appear here...", language="log")
+    log_container.code("Logs will appear here...", language="log")
 
-    setup_logging(log_container=log_container)
+    # Now that the container exists, assign it to the handler
+    log_handler.set_container(log_container)
 
     if run_button and query:
+        log_handler.buffer.clear() # Clear logs on new run
         with st.spinner("Agent is running... Please wait."):
             try:
-                # Initialize agent if it doesn't exist
                 if st.session_state.agent is None:
                     logging.info("Initializing agent...")
                     st.session_state.agent = PhoneAgent(config=st.session_state.config)
