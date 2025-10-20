@@ -10,6 +10,8 @@ class AdbController:
         self.device_id = device_id
         self.logger = logging.getLogger(__name__)
         self.width, self.height = self._get_screen_resolution()
+        self.screenshot_dir = "screenshots"
+        os.makedirs(self.screenshot_dir, exist_ok=True)
 
     def _get_screen_resolution(self) -> tuple[int, int]:
         """Gets the device's screen resolution using ADB."""
@@ -24,6 +26,16 @@ class AdbController:
         except Exception as e:
             self.logger.warning(f"Could not get screen resolution, defaulting to 1080x2340. Error: {e}")
             return 1080, 2340
+
+    def capture_screenshot(self) -> str:
+        """Captures a screenshot and returns the local file path."""
+        timestamp = int(time.time())
+        file_path = os.path.join(self.screenshot_dir, f"screen_{timestamp}.png")
+        self.run_adb_command(f"shell screencap -p /sdcard/screen.png")
+        self.run_adb_command(f"pull /sdcard/screen.png {file_path}")
+        self.run_adb_command(f"shell rm /sdcard/screen.png")
+        self.logger.info(f"Screenshot saved to {file_path}")
+        return file_path
 
     def run_adb_command(self, command: str) -> str:
         """Executes an ADB command and returns the output."""
@@ -46,17 +58,11 @@ class AdbController:
         center_x, center_y = self.width // 2, self.height // 2
         swipe_distance_y = int(self.height * 0.4)
         swipe_distance_x = int(self.width * 0.4)
-
-        if direction == "up":
-            self.run_adb_command(f"shell input swipe {center_x} {center_y + swipe_distance_y} {center_x} {center_y - swipe_distance_y} 300")
-        elif direction == "down":
-            self.run_adb_command(f"shell input swipe {center_x} {center_y - swipe_distance_y} {center_x} {center_y + swipe_distance_y} 300")
-        elif direction == "left":
-            self.run_adb_command(f"shell input swipe {center_x + swipe_distance_x} {center_y} {center_x - swipe_distance_x} {center_y} 300")
-        elif direction == "right":
-            self.run_adb_command(f"shell input swipe {center_x - swipe_distance_x} {center_y} {center_x + swipe_distance_x} {center_y} 300")
-        else:
-            raise ValueError(f"Invalid swipe direction: {direction}")
+        if direction == "up": self.run_adb_command(f"shell input swipe {center_x} {center_y + swipe_distance_y} {center_x} {center_y - swipe_distance_y} 300")
+        elif direction == "down": self.run_adb_command(f"shell input swipe {center_x} {center_y - swipe_distance_y} {center_x} {center_y + swipe_distance_y} 300")
+        elif direction == "left": self.run_adb_command(f"shell input swipe {center_x + swipe_distance_x} {center_y} {center_x - swipe_distance_x} {center_y} 300")
+        elif direction == "right": self.run_adb_command(f"shell input swipe {center_x - swipe_distance_x} {center_y} {center_x + swipe_distance_x} {center_y} 300")
+        else: raise ValueError(f"Invalid swipe direction: {direction}")
 
     def type_text(self, text: str):
         escaped_text = text.replace(" ", "%s").replace("'", "\\'")
@@ -76,14 +82,10 @@ class AdbController:
 
     def system_command(self, command: str):
         logging.warning(f"Executing potentially disruptive system command: '{command}'.")
-        if command == "sleep":
-            self.run_adb_command("shell input keyevent 26")
-        elif command == "reboot":
-            self.run_adb_command("reboot")
-        elif command == "poweroff":
-            self.run_adb_command("reboot -p")
-        else:
-            raise ValueError(f"Unsupported system command: {command}")
+        if command == "sleep": self.run_adb_command("shell input keyevent 26")
+        elif command == "reboot": self.run_adb_command("reboot")
+        elif command == "poweroff": self.run_adb_command("reboot -p")
+        else: raise ValueError(f"Unsupported system command: {command}")
 
     def take_photo(self):
         self.run_adb_command("shell am start -a android.media.action.IMAGE_CAPTURE")

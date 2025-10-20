@@ -7,27 +7,27 @@ from typing import List
 from adb_controller import AdbController
 
 @tool
+def finish_task(reason: str) -> str:
+    """
+    Call this tool to signal that the user's task is complete.
+    Provide a brief reason explaining why you believe the task is finished.
+    """
+    return f"Task finished: {reason}"
+
+@tool
 def python_repl(code: str) -> str:
     """
     A Python REPL tool. Use this to execute python code.
     Input should be a valid python code string.
-    The tool will return the output of the code, including any errors.
     """
     try:
         result = subprocess.run(
             [sys.executable, "-c", code],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30 # Add a timeout for safety
+            capture_output=True, text=True, check=True, timeout=30
         )
         return f"Execution successful:\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
-    except subprocess.CalledProcessError as e:
-        return f"Execution failed with return code {e.returncode}:\nstdout:\n{e.stdout}\nstderr:\n{e.stderr}"
-    except subprocess.TimeoutExpired:
-        return "Execution timed out after 30 seconds."
     except Exception as e:
-        return f"An unexpected error occurred: {e}"
+        return f"An error occurred: {e}"
 
 def get_adb_tools(adb_controller: AdbController) -> List:
     """Factory function to create ADB tools with a given controller."""
@@ -71,7 +71,7 @@ def get_adb_tools(adb_controller: AdbController) -> List:
     @tool
     def system_command(command: str) -> str:
         """Executes a system command like sleep, reboot, or poweroff. USE WITH CAUTION."""
-        logging.warning(f"Executing potentially disruptive system command: '{command}'. This is a non-interactive step.")
+        logging.warning(f"Executing potentially disruptive system command: '{command}'.")
         adb_controller.system_command(command)
         return f"Executed system command: {command}."
 
@@ -91,4 +91,5 @@ def get_adb_tools(adb_controller: AdbController) -> List:
         system_command,
         take_photo,
         python_repl,
+        finish_task, # Add the new tool here
     ]

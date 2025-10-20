@@ -1,10 +1,7 @@
 import json
 import logging
 import streamlit as st
-import subprocess
-import os
 from phone_agent import PhoneAgent
-from adb_controller import AdbController
 
 # --- Logging Setup ---
 class UILogHandler(logging.Handler):
@@ -16,14 +13,12 @@ class UILogHandler(logging.Handler):
     def emit(self, record):
         log_entry = self.format(record)
         self.buffer.append(log_entry)
-        if len(self.buffer) > 200:
-            self.buffer = self.buffer[-200:]
+        if len(self.buffer) > 200: self.buffer = self.buffer[-200:]
         self.container.code("\n".join(self.buffer), language="log")
 
 def setup_logging(container):
     root_logger = logging.getLogger()
-    if root_logger.hasHandlers():
-        root_logger.handlers.clear()
+    if root_logger.hasHandlers(): root_logger.handlers.clear()
 
     log_handler = UILogHandler(container)
     log_handler.setLevel(logging.INFO)
@@ -37,7 +32,8 @@ def setup_logging(container):
 def load_config():
     default_config = {
         "device_id": None,
-        "model_name": "mixtral-8x7b-32768" # New, valid default model
+        "text_model": "mixtral-8x7b-32768",
+        "vision_model": "l4-scout-17b"
     }
     try:
         with open('config.json', 'r') as f:
@@ -56,37 +52,34 @@ def save_config(config):
 st.set_page_config(layout="wide")
 st.title("📱 Phone Agent Control")
 
-if 'config' not in st.session_state:
-    st.session_state.config = load_config()
-if 'agent' not in st.session_state:
-    st.session_state.agent = None
+if 'config' not in st.session_state: st.session_state.config = load_config()
+if 'agent' not in st.session_state: st.session_state.agent = None
 
 query_tab, config_tab = st.tabs(["Query", "Configuration"])
 
 with config_tab:
     st.header("⚙️ Configuration")
     
-    st.subheader("Device Detection")
-    if st.button("Detect Phone"):
-        try:
-            controller = AdbController()
-            st.session_state.config['device_id'] = controller.device_id
-            st.success(f"Phone detected with screen resolution: {controller.width}x{controller.height}")
-            save_config(st.session_state.config)
-        except Exception as e:
-            st.error(f"Could not detect phone. Error: {e}")
-
     st.subheader("LLM Configuration")
 
-    # Updated model list with a valid default
-    available_models = ["mixtral-8x7b-32768", "llama3-8b-8192", "gemma-7b-it"]
-    model_name = st.selectbox(
-        "Select Language Model",
-        options=available_models,
-        index=available_models.index(st.session_state.config.get("model_name", "mixtral-8x7b-32768")),
-        help="`mixtral-8x7b-32768` is recommended for reliable tool use."
+    # Model Selectors
+    text_models = ["mixtral-8x7b-32768", "llama3-8b-8192", "gemma-7b-it"]
+    vision_models = ["l4-scout-17b", "l4-maverick-22b"]
+
+    text_model_name = st.selectbox(
+        "Select Text (Reasoning) Model",
+        options=text_models,
+        index=text_models.index(st.session_state.config.get("text_model", "mixtral-8x7b-32768")),
+        help="The main agent brain. `mixtral-8x7b-32768` is recommended."
     )
-    st.session_state.config["model_name"] = model_name
+    st.session_state.config["text_model"] = text_model_name
+
+    vision_model_name = st.selectbox(
+        "Select Vision (Observer) Model",
+        options=vision_models,
+        index=vision_models.index(st.session_state.config.get("vision_model", "l4-scout-17b"))
+    )
+    st.session_state.config["vision_model"] = vision_model_name
 
     if st.button("Save Configuration"):
         save_config(st.session_state.config)

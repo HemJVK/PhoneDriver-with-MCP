@@ -6,17 +6,15 @@ from dotenv import load_dotenv
 
 class PhoneAgent:
     """
-    A wrapper class for the GroqAgent to provide a consistent interface.
+    A wrapper class for the GroqAgent to provide a consistent interface for the UI.
     """
     def __init__(self, config: dict = None):
         """
         Initializes the PhoneAgent.
         """
-        if config is None:
-            config = {}
+        if config is None: config = {}
 
         load_dotenv()
-
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
         groq_api_key = os.environ.get("GROQ_API_KEY")
@@ -24,17 +22,22 @@ class PhoneAgent:
             raise ValueError("GROQ_API_KEY not found. Please create a .env file.")
 
         device_id = config.get('device_id')
-        # Update the default model name here as well
-        model_name = config.get('model_name', 'mixtral-8x7b-32768')
+        text_model = config.get('text_model', 'mixtral-8x7b-32768')
+        vision_model = config.get('vision_model', 'l4-scout-17b')
 
-        self.agent = GroqAgent(api_key=groq_api_key, device_id=device_id, model_name=model_name)
-        logging.info(f"PhoneAgent initialized with GroqAgent using model: {model_name}")
+        self.agent = GroqAgent(
+            api_key=groq_api_key,
+            device_id=device_id,
+            text_model=text_model,
+            vision_model=vision_model
+        )
+        logging.info(f"PhoneAgent initialized with dual-LLM setup: Text={text_model}, Vision={vision_model}")
 
     def execute_task(self, user_request: str):
         """
-        Executes a task using the underlying GroqAgent.
+        Executes a task using the agent's iterative loop.
         """
-        return self.agent.run_task(user_request)
+        return self.agent.run_task_loop(user_request)
 
 def main():
     """
@@ -52,10 +55,7 @@ def main():
     try:
         agent = PhoneAgent(config)
         result = agent.execute_task(' '.join(os.sys.argv[1:]))
-
-        print("\n----- Task Complete -----")
-        print(f"Final Result: {result}")
-        print("-------------------------")
+        print(f"\n----- Task Complete -----\nFinal Result: {result}\n-------------------------")
     except ValueError as e:
         print(f"Error: {e}")
 
