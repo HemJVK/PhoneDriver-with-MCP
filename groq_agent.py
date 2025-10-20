@@ -14,13 +14,12 @@ class GroqAgent:
     An agent that uses a dual-LLM approach: a vision model to see and a Groq text model to reason and act.
     """
 
-    def __init__(self, api_key: str, device_id: str = None, text_model: str = "mixtral-8x7b-32768"):
+    def __init__(self, api_key: str, device_id: str = None, text_model: str = "gemma-7b-it"):
         self.logger = logging.getLogger(__name__)
         self.adb_controller = AdbController(device_id)
-        # The VisionAnalyzer now uses its own default model.
         self.vision_analyzer = VisionAnalyzer()
 
-        # The reasoning model
+        # Ensure the model is initialized with the passed model_name
         self.model = ChatGroq(api_key=api_key, model_name=text_model, temperature=0)
 
         self.tools = self._load_tools()
@@ -53,11 +52,9 @@ class GroqAgent:
         for step in range(max_steps):
             self.logger.info(f"--- Step {step + 1}/{max_steps} ---")
 
-            # 1. OBSERVE: Look at the screen
             screenshot_path = self.adb_controller.capture_screenshot()
             screen_description = self.vision_analyzer.describe_screen(screenshot_path)
 
-            # 2. THINK: Decide on the next action
             reasoning_prompt = (
                 f"**User's Goal:** {user_request}\n\n"
                 f"**Current Screen Description:**\n{screen_description}\n\n"
@@ -72,8 +69,6 @@ class GroqAgent:
 
             response = self.agent_executor.invoke({"messages": messages})
 
-            # 3. ACT: The tool call is executed automatically by the agent executor.
-            # Check if the task is finished.
             last_message = response["messages"][-1]
             if "finish_task" in str(last_message.content):
                 self.logger.info("Agent decided the task is finished.")

@@ -22,15 +22,15 @@ class PhoneAgent:
             raise ValueError("GROQ_API_KEY not found. Please create a .env file.")
 
         device_id = config.get('device_id')
-        text_model = config.get('text_model', 'mixtral-8x7b-32768')
+        # Update the default model name here as well to a valid one
+        text_model = config.get('text_model', 'gemma-7b-it')
 
-        # The VisionAnalyzer is now self-contained and does not need a model name from the config.
         self.agent = GroqAgent(
             api_key=groq_api_key,
             device_id=device_id,
             text_model=text_model
         )
-        logging.info(f"PhoneAgent initialized with dual-LLM setup: Text={text_model}, Vision=Qwen/Qwen-VL-Chat")
+        logging.info(f"PhoneAgent initialized with dual-LLM setup: Text={text_model}, Vision=HuggingFaceTB/SmolVLM2-2.2B-Instruct")
 
     def execute_task(self, user_request: str):
         """
