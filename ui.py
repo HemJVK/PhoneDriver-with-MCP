@@ -20,7 +20,6 @@ def setup_logging():
     log_handler.setFormatter(formatter)
     
     root_logger = logging.getLogger()
-    # Clear existing handlers
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
     root_logger.addHandler(log_handler)
@@ -35,7 +34,6 @@ def get_agent():
     global agent_instance
     if agent_instance is None:
         logging.info("Initializing agent for the first time...")
-        # Load config for device_id if available
         config = {}
         try:
             with open('config.json', 'r') as f:
@@ -46,7 +44,7 @@ def get_agent():
         agent_instance = PhoneAgent(config=config)
     return agent_instance
 
-def execute_task_thread(task_text, progress):
+def execute_task_thread(task_text):
     global is_running
     is_running = True
     log_handler.logs.clear()
@@ -71,10 +69,10 @@ def start_task(task_text):
         gr.Warning("Please enter a task.")
         return "", ""
 
-    thread = threading.Thread(target=execute_task_thread, args=(task_text, gr.Progress()))
+    thread = threading.Thread(target=execute_task_thread, args=(task_text,))
     thread.start()
     
-    return "Task started... Logs will appear below.", ""
+    return "Task started... Logs will update automatically.", ""
 
 def get_logs():
     return "\n".join(log_handler.logs)
@@ -98,10 +96,10 @@ def create_ui():
             outputs=[task_input, log_output]
         )
         
-        demo.load(
+        # Correct way to schedule periodic updates in Gradio
+        gr.Timer(1, every=None).tick(
             fn=get_logs,
             outputs=log_output,
-            every=1
         )
         
     return demo
