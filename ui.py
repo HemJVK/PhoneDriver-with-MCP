@@ -32,7 +32,7 @@ def setup_logging(container):
 def load_config():
     default_config = {
         "device_id": None,
-        "text_model": "mixtral-8x7b-32768",
+        "text_model": "mixtral-8x7b-32768", # The reliable default
     }
     try:
         with open('config.json', 'r') as f:
@@ -61,14 +61,14 @@ with config_tab:
     
     st.subheader("LLM Configuration")
 
-    # Text Model Selector
+    # Updated model list with reliable, Groq-hosted models
     text_models = ["mixtral-8x7b-32768", "llama3-8b-8192", "gemma-7b-it"]
 
     text_model_name = st.selectbox(
         "Select Text (Reasoning) Model",
         options=text_models,
         index=text_models.index(st.session_state.config.get("text_model", "mixtral-8x7b-32768")),
-        help="The main agent brain. `mixtral-8x7b-32768` is recommended for tool use."
+        help="The main agent brain. `mixtral-8x7b-32768` is highly recommended for tool use."
     )
     st.session_state.config["text_model"] = text_model_name
 
