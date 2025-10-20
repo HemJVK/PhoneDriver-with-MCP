@@ -15,20 +15,20 @@ class PhoneAgent:
         if config is None:
             config = {}
 
-        # Load environment variables from .env file
         load_dotenv()
 
         logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
         groq_api_key = os.environ.get("GROQ_API_KEY")
         if not groq_api_key:
-            # The error is now more informative.
-            raise ValueError("GROQ_API_KEY not found. Please create a .env file in the root directory and add GROQ_API_KEY='your_api_key'.")
+            raise ValueError("GROQ_API_KEY not found. Please create a .env file.")
 
         device_id = config.get('device_id')
+        # Update the default model name here as well
+        model_name = config.get('model_name', 'mixtral-8x7b-32768')
 
-        self.agent = GroqAgent(api_key=groq_api_key, device_id=device_id)
-        logging.info("PhoneAgent initialized with GroqAgent.")
+        self.agent = GroqAgent(api_key=groq_api_key, device_id=device_id, model_name=model_name)
+        logging.info(f"PhoneAgent initialized with GroqAgent using model: {model_name}")
 
     def execute_task(self, user_request: str):
         """
@@ -44,8 +44,6 @@ def main():
         print("Usage: python phone_agent.py 'your task here'")
         os.sys.exit(1)
     
-    task = ' '.join(os.sys.argv[1:])
-    
     config = {}
     if os.path.exists('config.json'):
         with open('config.json', 'r') as f:
@@ -53,15 +51,13 @@ def main():
     
     try:
         agent = PhoneAgent(config)
-        result = agent.execute_task(task)
+        result = agent.execute_task(' '.join(os.sys.argv[1:]))
 
         print("\n----- Task Complete -----")
         print(f"Final Result: {result}")
         print("-------------------------")
     except ValueError as e:
         print(f"Error: {e}")
-        # Add a hint for the user
-        print("Please make sure you have a .env file with your GROQ_API_KEY.")
 
 if __name__ == "__main__":
     main()

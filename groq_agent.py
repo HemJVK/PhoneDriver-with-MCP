@@ -13,11 +13,11 @@ class GroqAgent:
     A command-based agent that uses Groq's language model to interact with a phone.
     """
 
-    def __init__(self, api_key: str, device_id: str = None, model_name: str = "llama3-70b-8192"):
+    def __init__(self, api_key: str, device_id: str = None, model_name: str = "mixtral-8x7b-32768"):
         self.logger = logging.getLogger(__name__)
         self.adb_controller = AdbController(device_id)
 
-        # Using a powerful model and setting temperature to 0 for deterministic tool use
+        # Ensure the model is initialized with the passed model_name
         self.model = ChatGroq(api_key=api_key, model_name=model_name, temperature=0)
 
         self.tools = self._load_tools()
@@ -41,10 +41,9 @@ class GroqAgent:
         """
         self.logger.info(f"Starting pure text-based task: {user_request}")
 
-        # A very strict prompt to ensure a single, well-formatted tool call.
         system_prompt = (
             "You are a precise phone automation assistant. Your sole purpose is to execute tasks by making tool calls. "
-            "You will be given a user's goal. Your response MUST be a single, valid, properly formatted tool call to accomplish the next step. "
+            "You will be given a user's goal. Your response MUST be a single, valid, properly formatted tool call. "
             "Do NOT output a list of calls. Do NOT provide any conversational text or explanations. Your output must be ONLY one tool call. "
             "Pay extremely close attention to the tool's schema. For the `tap` tool, `x` and `y` parameters MUST be integers. "
             "The screen resolution is {width}x{height}. All coordinates must be valid integers within these bounds."
