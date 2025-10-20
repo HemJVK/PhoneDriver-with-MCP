@@ -33,7 +33,6 @@ def load_config():
     default_config = {
         "device_id": None,
         "text_model": "mixtral-8x7b-32768",
-        "vision_model": "l4-scout-17b"
     }
     try:
         with open('config.json', 'r') as f:
@@ -62,24 +61,16 @@ with config_tab:
     
     st.subheader("LLM Configuration")
 
-    # Model Selectors
+    # Text Model Selector
     text_models = ["mixtral-8x7b-32768", "llama3-8b-8192", "gemma-7b-it"]
-    vision_models = ["l4-scout-17b", "l4-maverick-22b"]
 
     text_model_name = st.selectbox(
         "Select Text (Reasoning) Model",
         options=text_models,
         index=text_models.index(st.session_state.config.get("text_model", "mixtral-8x7b-32768")),
-        help="The main agent brain. `mixtral-8x7b-32768` is recommended."
+        help="The main agent brain. `mixtral-8x7b-32768` is recommended for tool use."
     )
     st.session_state.config["text_model"] = text_model_name
-
-    vision_model_name = st.selectbox(
-        "Select Vision (Observer) Model",
-        options=vision_models,
-        index=vision_models.index(st.session_state.config.get("vision_model", "l4-scout-17b"))
-    )
-    st.session_state.config["vision_model"] = vision_model_name
 
     if st.button("Save Configuration"):
         save_config(st.session_state.config)

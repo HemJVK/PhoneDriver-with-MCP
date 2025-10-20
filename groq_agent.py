@@ -11,13 +11,14 @@ from vision_analyzer import VisionAnalyzer
 
 class GroqAgent:
     """
-    An agent that uses a dual-LLM approach: a Groq vision model to see and a Groq text model to reason and act.
+    An agent that uses a dual-LLM approach: a vision model to see and a Groq text model to reason and act.
     """
 
-    def __init__(self, api_key: str, device_id: str = None, text_model: str = "mixtral-8x7b-32768", vision_model: str = "l4-scout-17b"):
+    def __init__(self, api_key: str, device_id: str = None, text_model: str = "mixtral-8x7b-32768"):
         self.logger = logging.getLogger(__name__)
         self.adb_controller = AdbController(device_id)
-        self.vision_analyzer = VisionAnalyzer(api_key=api_key, model_name=vision_model)
+        # The VisionAnalyzer now uses its own default model.
+        self.vision_analyzer = VisionAnalyzer()
 
         # The reasoning model
         self.model = ChatGroq(api_key=api_key, model_name=text_model, temperature=0)
@@ -71,9 +72,8 @@ class GroqAgent:
 
             response = self.agent_executor.invoke({"messages": messages})
 
-            # 3. ACT: Execute the action
-            # The agent's response is the action, which is automatically executed by the LangGraph agent.
-            # We just need to check if the task is finished.
+            # 3. ACT: The tool call is executed automatically by the agent executor.
+            # Check if the task is finished.
             last_message = response["messages"][-1]
             if "finish_task" in str(last_message.content):
                 self.logger.info("Agent decided the task is finished.")

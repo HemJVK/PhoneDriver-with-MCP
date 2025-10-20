@@ -23,15 +23,14 @@ class PhoneAgent:
 
         device_id = config.get('device_id')
         text_model = config.get('text_model', 'mixtral-8x7b-32768')
-        vision_model = config.get('vision_model', 'l4-scout-17b')
 
+        # The VisionAnalyzer is now self-contained and does not need a model name from the config.
         self.agent = GroqAgent(
             api_key=groq_api_key,
             device_id=device_id,
-            text_model=text_model,
-            vision_model=vision_model
+            text_model=text_model
         )
-        logging.info(f"PhoneAgent initialized with dual-LLM setup: Text={text_model}, Vision={vision_model}")
+        logging.info(f"PhoneAgent initialized with dual-LLM setup: Text={text_model}, Vision=Qwen/Qwen-VL-Chat")
 
     def execute_task(self, user_request: str):
         """
