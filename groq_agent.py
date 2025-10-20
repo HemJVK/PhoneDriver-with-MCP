@@ -33,7 +33,7 @@ class GroqAgent:
         """Creates the agent executor using LangGraph."""
         return create_react_agent(self.model, self.tools)
 
-    def generate_plan(self, user_request: str):
+    def generate_plan(self, user_request: str) -> str:
         """
         Generates a high-level, step-by-step plan for the user to review.
         """
@@ -41,6 +41,9 @@ class GroqAgent:
 
         screenshot_path = self.adb_controller.capture_screenshot()
         screen_description = self.vision_analyzer.describe_screen(screenshot_path)
+
+        if "Error:" in screen_description:
+            return "Could not generate a plan because the vision model failed to analyze the screen."
 
         prompt = (
             "You are a meticulous planning agent. Your task is to create a clear, step-by-step plan to achieve the user's goal on a smartphone. "
@@ -66,17 +69,20 @@ class GroqAgent:
 
         system_prompt = (
             "You are a precise phone automation assistant. Your only purpose is to execute the next step of a given plan. "
-            "You will be given the user's high-level goal, the overall plan, a history of actions you have already taken, and a description of the current screen. "
-            "Your response MUST be a single, valid tool call to accomplish the *next* logical step in the plan. "
-            "If you believe the task is complete, use the 'finish_task' tool. "
-            "Do NOT deviate from the plan. Your output must be ONLY the tool call."
-        ).format(width=self.adb_controller.width, height=self.adb_controller.height)
+            "You will be given the user's goal, the overall plan, a history of actions, and a description of the current screen. "
+            "Your response MUST be a single, valid tool call to accomplish the *next* logical step. "
+            "If the task is complete, use the 'finish_task' tool. Do NOT deviate from the plan."
+        )
 
         for step in range(max_steps):
             self.logger.info(f"--- Step {step + 1}/{max_steps} ---")
 
             screenshot_path = self.adb_controller.capture_screenshot()
             screen_description = self.vision_analyzer.describe_screen(screenshot_path)
+
+            if "Error:" in screen_description:
+                self.logger.error("Vision model failed during execution loop. Aborting task.")
+                return "Task failed because the vision model could not analyze the screen."
 
             history_str = "\n".join(action_history) if action_history else "No actions taken yet."
 
@@ -85,14 +91,11 @@ class GroqAgent:
                 f"**Overall Plan:**\n{plan}\n\n"
                 f"**Action History:**\n{history_str}\n\n"
                 f"**Current Screen Description:**\n{screen_description}\n\n"
-                f"Based on the plan, history, and current screen, what is the single best tool call to make for the next step? "
+                f"Based on the plan, history, and screen, what is the single best tool call for the next step? "
                 "Use 'finish_task' if the plan is complete."
             )
 
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=reasoning_prompt)
-            ]
+            messages = [ SystemMessage(content=system_prompt), HumanMessage(content=reasoning_prompt) ]
 
             response = self.agent_executor.invoke({"messages": messages})
 

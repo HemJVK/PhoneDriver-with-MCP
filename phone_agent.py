@@ -22,7 +22,6 @@ class PhoneAgent:
             raise ValueError("GROQ_API_KEY not found. Please create a .env file.")
             
         device_id = config.get('device_id')
-        # Update the default model name here as well to a valid one
         text_model = config.get('text_model', 'gemma-7b-it')
 
         self.agent = GroqAgent(
@@ -36,7 +35,8 @@ class PhoneAgent:
         """
         Executes a task using the agent's iterative loop.
         """
-        return self.agent.run_task_loop(user_request)
+        # Call the new, unified run_task method
+        return self.agent.run_task(user_request)
 
 def main():
     """
