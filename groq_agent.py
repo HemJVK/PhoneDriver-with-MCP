@@ -17,7 +17,8 @@ class GroqAgent:
         self.logger = logging.getLogger(__name__)
         self.adb_controller = AdbController(device_id)
 
-        self.model = ChatGroq(api_key=api_key, model_name=model_name, temperature=0) # Set temp to 0 for determinism
+        # Using a powerful model and setting temperature to 0 for deterministic tool use
+        self.model = ChatGroq(api_key=api_key, model_name=model_name, temperature=0)
 
         self.tools = self._load_tools()
         self.agent_executor = self._create_agent_executor()
@@ -40,13 +41,12 @@ class GroqAgent:
         """
         self.logger.info(f"Starting pure text-based task: {user_request}")
 
-        # A more strict and explicit prompt to guide the LLM.
+        # A very strict prompt to ensure a single, well-formatted tool call.
         system_prompt = (
             "You are a precise phone automation assistant. Your sole purpose is to execute tasks by making tool calls. "
-            "You will be given a user's goal. Your response MUST be a single, valid, properly formatted tool call. "
-            "Do NOT provide any conversational text or explanations. Your output must be ONLY the tool call. "
-            "Pay extremely close attention to the tool's schema. "
-            "Specifically, for the `tap` tool, the `x` and `y` parameters MUST be integers, not strings. "
+            "You will be given a user's goal. Your response MUST be a single, valid, properly formatted tool call to accomplish the next step. "
+            "Do NOT output a list of calls. Do NOT provide any conversational text or explanations. Your output must be ONLY one tool call. "
+            "Pay extremely close attention to the tool's schema. For the `tap` tool, `x` and `y` parameters MUST be integers. "
             "The screen resolution is {width}x{height}. All coordinates must be valid integers within these bounds."
         ).format(width=self.adb_controller.width, height=self.adb_controller.height)
 
