@@ -1,6 +1,8 @@
 import subprocess
 import logging
 import re
+import os
+import time
 
 class AdbController:
     """A wrapper for ADB commands to control an Android device."""
@@ -8,6 +10,8 @@ class AdbController:
         self.device_id = device_id
         self.logger = logging.getLogger(__name__)
         self.width, self.height = self._get_screen_resolution()
+        self.screenshot_dir = "./screenshots"
+        os.makedirs(self.screenshot_dir, exist_ok=True)
 
     def _get_screen_resolution(self) -> tuple[int, int]:
         """Gets the device's screen resolution using ADB."""
@@ -36,6 +40,16 @@ class AdbController:
         except subprocess.CalledProcessError as e:
             self.logger.error(f"ADB command failed: {full_command}\nError: {e.stderr}")
             raise
+
+    def capture_screenshot(self) -> str:
+        """Captures a screenshot and saves it locally."""
+        timestamp = int(time.time())
+        screenshot_path = os.path.join(self.screenshot_dir, f"screen_{timestamp}.png")
+        self.run_adb_command(f"shell screencap -p /sdcard/screen.png")
+        self.run_adb_command(f"pull /sdcard/screen.png {screenshot_path}")
+        self.run_adb_command(f"shell rm /sdcard/screen.png")
+        self.logger.info(f"Screenshot captured and saved to {screenshot_path}")
+        return screenshot_path
 
     def tap(self, x: int, y: int):
         self.run_adb_command(f"shell input tap {x} {y}")
@@ -67,13 +81,13 @@ class AdbController:
         self.run_adb_command(f"shell am start -a android.intent.action.CALL -d tel:{number}")
 
     def send_message(self, number: str, message: str):
-        # NOTE: This implementation is brittle and depends on the default messaging app's UI.
         self.run_adb_command(f"shell am start -a android.intent.action.SENDTO -d sms:{number}")
         self.run_adb_command(f"shell input text '{message.replace(' ', '%s')}'")
-        self.run_adb_command("shell input keyevent 22")  # D-Pad Right
-        self.run_adb_command("shell input keyevent 66")  # Enter
+        self.run_adb_command("shell input keyevent 22")
+        self.run_adb_command("shell input keyevent 66")
 
     def system_command(self, command: str):
+        logging.warning(f"Executing potentially disruptive system command: '{command}'.")
         if command == "sleep":
             self.run_adb_command("shell input keyevent 26")
         elif command == "reboot":
@@ -84,6 +98,5 @@ class AdbController:
             raise ValueError(f"Unsupported system command: {command}")
 
     def take_photo(self):
-        # NOTE: This implementation is brittle and depends on the default camera app's UI.
         self.run_adb_command("shell am start -a android.media.action.IMAGE_CAPTURE")
-        self.run_adb_command("shell input keyevent 27") # Camera shutter
+        self.run_adb_command("shell input keyevent 27")

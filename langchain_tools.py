@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import logging
 from langchain_core.tools import tool
 from typing import List
 
@@ -69,12 +70,10 @@ def get_adb_tools(adb_controller: AdbController) -> List:
 
     @tool
     def system_command(command: str) -> str:
-        """Executes a system command like sleep, reboot, or poweroff, with user confirmation."""
-        confirm = input(f"Confirm system command '{command}'? (y/n): ")
-        if confirm.lower() == 'y':
-            adb_controller.system_command(command)
-            return f"Executed system command: {command}."
-        return "System command aborted by user."
+        """Executes a system command like sleep, reboot, or poweroff. USE WITH CAUTION."""
+        logging.warning(f"Executing potentially disruptive system command: '{command}'. This is a non-interactive step.")
+        adb_controller.system_command(command)
+        return f"Executed system command: {command}."
 
     @tool
     def take_photo() -> str:
@@ -91,5 +90,5 @@ def get_adb_tools(adb_controller: AdbController) -> List:
         send_message,
         system_command,
         take_photo,
-        python_repl, # Add the custom REPL tool here
+        python_repl,
     ]

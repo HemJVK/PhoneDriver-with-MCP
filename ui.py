@@ -1,110 +1,134 @@
 import json
 import logging
-import threading
-import gradio as gr
+import streamlit as st
+import subprocess
+import os
 from phone_agent import PhoneAgent
+from adb_controller import AdbController
 
+# --- Logging Setup ---
 class UILogHandler(logging.Handler):
-    def __init__(self):
+    """A logging handler that writes logs to a Streamlit UI element."""
+    def __init__(self, container):
         super().__init__()
-        self.logs = []
+        self.container = container
+        self.buffer = []
 
     def emit(self, record):
         log_entry = self.format(record)
-        self.logs.append(log_entry)
+        self.buffer.append(log_entry)
+        self.container.code("\n".join(self.buffer))
 
-def setup_logging():
-    log_handler = UILogHandler()
+def setup_logging(container):
+    """Sets up a logger to stream to the UI."""
+    root_logger = logging.getLogger()
+    # Clear any existing handlers
+    if root_logger.hasHandlers():
+        root_logger.handlers.clear()
+
+    log_handler = UILogHandler(container)
     log_handler.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     log_handler.setFormatter(formatter)
-    
-    root_logger = logging.getLogger()
-    if root_logger.hasHandlers():
-        root_logger.handlers.clear()
     root_logger.addHandler(log_handler)
     root_logger.setLevel(logging.INFO)
-    return log_handler
 
-log_handler = setup_logging()
-agent_instance = None
-is_running = False
-
-def get_agent():
-    global agent_instance
-    if agent_instance is None:
-        logging.info("Initializing agent for the first time...")
-        config = {}
-        try:
-            with open('config.json', 'r') as f:
-                config = json.load(f)
-        except FileNotFoundError:
-            logging.warning("config.json not found, using default device.")
-
-        agent_instance = PhoneAgent(config=config)
-    return agent_instance
-
-def execute_task_thread(task_text):
-    global is_running
-    is_running = True
-    log_handler.logs.clear()
-    
+# --- Config Management ---
+def load_config():
+    """Loads config.json or returns a default."""
+    default_config = {
+        "device_id": None,
+        # Add LLM temp to config
+        "temperature": 0.1
+    }
     try:
-        agent = get_agent()
-        logging.info(f"Starting task: {task_text}")
-        result = agent.execute_task(task_text)
-        logging.info(f"Task finished. Final result: {result}")
-    except Exception as e:
-        logging.error(f"An error occurred: {e}", exc_info=True)
-    finally:
-        is_running = False
+        with open('config.json', 'r') as f:
+            config = json.load(f)
+            # Ensure all keys from default are present
+            for key, value in default_config.items():
+                config.setdefault(key, value)
+            return config
+    except (FileNotFoundError, json.JSONDecodeError):
+        return default_config
 
-def start_task(task_text):
-    global is_running
-    if is_running:
-        gr.Warning("A task is already running.")
-        return "", ""
+def save_config(config):
+    """Saves the config to config.json."""
+    with open('config.json', 'w') as f:
+        json.dump(config, f, indent=2)
+
+# --- Main App Logic ---
+st.set_page_config(layout="wide")
+st.title("📱 Phone Agent Control")
+
+# Initialize session state
+if 'config' not in st.session_state:
+    st.session_state.config = load_config()
+if 'agent' not in st.session_state:
+    st.session_state.agent = None
+
+# Create tabs
+query_tab, config_tab = st.tabs(["Query", "Configuration"])
+
+# --- Configuration Tab ---
+with config_tab:
+    st.header("⚙️ Configuration")
     
-    if not task_text:
-        gr.Warning("Please enter a task.")
-        return "", ""
+    st.subheader("Device Detection")
+    if st.button("Detect Phone"):
+        try:
+            controller = AdbController()
+            st.session_state.config['device_id'] = controller.device_id
+            st.success(f"Phone detected with screen resolution: {controller.width}x{controller.height}")
+            save_config(st.session_state.config)
+        except Exception as e:
+            st.error(f"Could not detect phone. Please ensure ADB is installed and your device is connected. Error: {e}")
 
-    thread = threading.Thread(target=execute_task_thread, args=(task_text,))
-    thread.start()
-    
-    return "Task started... Logs will update automatically.", ""
+    st.subheader("LLM Configuration")
+    temp = st.slider(
+        "Temperature",
+        min_value=0.0,
+        max_value=1.0,
+        value=st.session_state.config.get("temperature", 0.1),
+        step=0.05,
+        help="Controls the randomness of the LLM's responses. Lower is more deterministic."
+    )
+    st.session_state.config["temperature"] = temp
 
-def get_logs():
-    return "\n".join(log_handler.logs)
+    if st.button("Save Configuration"):
+        save_config(st.session_state.config)
+        st.success("Configuration saved successfully!")
+        # Clear the agent to force re-initialization with new settings
+        st.session_state.agent = None
 
-def create_ui():
-    with gr.Blocks(title="Phone Agent", theme="soft") as demo:
-        gr.Markdown("# 📱 Phone Agent Control")
-        gr.Markdown("A text-based agent to control your Android device.")
+# --- Query Tab ---
+with query_tab:
+    st.header("▶️ Run a Task")
 
-        with gr.Row():
-            with gr.Column(scale=2):
-                task_input = gr.Textbox(label="Task to Perform", placeholder="e.g., 'open the calculator and type 2+2'")
-                start_button = gr.Button("▶️ Run Task", variant="primary")
-            
-            with gr.Column(scale=3):
-                log_output = gr.Textbox(label="Agent Logs", lines=15, autoscroll=True, interactive=False)
-        
-        start_button.click(
-            fn=start_task,
-            inputs=[task_input],
-            outputs=[task_input, log_output]
-        )
-        
-        # Correct way to schedule periodic updates in Gradio
-        gr.Timer(1).tick(
-            fn=get_logs,
-            outputs=log_output,
-        )
-        
-    return demo
+    query = st.text_area("Enter your query for the phone agent:", height=100)
 
-if __name__ == "__main__":
-    ui = create_ui()
-    ui.queue()
-    ui.launch(show_error=True)
+    run_button = st.button("Execute Task")
+
+    st.subheader("Agent Logs")
+    log_container = st.empty()
+    log_box = log_container.code("Logs will appear here...", language="log")
+
+    setup_logging(log_container=log_container)
+
+    if run_button and query:
+        with st.spinner("Agent is running... Please wait."):
+            try:
+                # Initialize agent if it doesn't exist
+                if st.session_state.agent is None:
+                    logging.info("Initializing agent...")
+                    st.session_state.agent = PhoneAgent(config=st.session_state.config)
+
+                logging.info(f"Executing task: {query}")
+                result = st.session_state.agent.execute_task(query)
+                logging.info(f"Task finished with result: {result}")
+                st.success("Task execution finished!")
+
+            except Exception as e:
+                logging.error(f"Failed to execute task: {e}", exc_info=True)
+                st.error(f"An error occurred: {e}")
+    elif run_button:
+        st.warning("Please enter a query.")
