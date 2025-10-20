@@ -19,7 +19,6 @@ class UILogHandler(logging.Handler):
 def setup_logging(container):
     root_logger = logging.getLogger()
     if root_logger.hasHandlers(): root_logger.handlers.clear()
-
     log_handler = UILogHandler(container)
     log_handler.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
@@ -30,10 +29,7 @@ def setup_logging(container):
 
 # --- Config Management ---
 def load_config():
-    default_config = {
-        "device_id": None,
-        "text_model": "gemma-7b-it", # A valid, working default
-    }
+    default_config = { "device_id": None, "text_model": "gemma-7b-it" }
     try:
         with open('config.json', 'r') as f:
             config = json.load(f)
@@ -58,23 +54,16 @@ query_tab, config_tab = st.tabs(["Query", "Configuration"])
 
 with config_tab:
     st.header("⚙️ Configuration")
-    
     st.subheader("LLM Configuration")
-
-    # A curated list of known good models
     text_models = ["gemma-7b-it"]
-
     text_model_name = st.selectbox(
-        "Select Text (Reasoning) Model",
-        options=text_models,
-        index=text_models.index(st.session_state.config.get("text_model", "gemma-7b-it")),
-        help="Select a powerful model for the best tool-use performance."
+        "Select Text (Reasoning) Model", options=text_models,
+        index=text_models.index(st.session_state.config.get("text_model", "gemma-7b-it"))
     )
     st.session_state.config["text_model"] = text_model_name
-
     if st.button("Save Configuration"):
         save_config(st.session_state.config)
-        st.success("Configuration saved! Agent will use new settings on next run.")
+        st.success("Configuration saved!")
         st.session_state.agent = None
 
 with query_tab:
@@ -82,26 +71,45 @@ with query_tab:
 
     query = st.text_area("Enter your query:", height=100)
 
+    review_mode = st.toggle("Review Steps Before Execution", value=True)
+
     run_button = st.button("Execute Task")
 
     st.subheader("Agent Logs")
     log_container = st.empty()
     log_handler = setup_logging(log_container)
 
+    # This is the core logic for running the agent
     if run_button and query:
         log_handler.buffer.clear()
-        with st.spinner("Agent is running..."):
-            try:
-                logging.info("Initializing agent with current settings...")
-                st.session_state.agent = PhoneAgent(config=st.session_state.config)
+        logging.info("Initializing agent with current settings...")
+        st.session_state.agent = PhoneAgent(config=st.session_state.config)
 
-                logging.info(f"Executing task: {query}")
-                result = st.session_state.agent.execute_task(query)
+        if review_mode:
+            with st.spinner("Generating plan..."):
+                plan = st.session_state.agent.agent.generate_plan(query)
+
+            with st.form("review_plan_form"):
+                st.subheader("Review and Edit the Plan")
+                edited_plan = st.text_area("Generated Plan:", value=plan, height=200)
+                submitted = st.form_submit_button("Approve and Run")
+
+                if submitted:
+                    with st.spinner("Executing approved plan..."):
+                        logging.info("User approved the plan. Executing...")
+                        result = st.session_state.agent.agent.run_task_loop(query, plan=edited_plan)
+                        logging.info(f"Task finished with result: {result}")
+                        st.success("Task execution finished!")
+        else:
+            # Autonomous execution
+            with st.spinner("Agent is running autonomously..."):
+                logging.info("Executing task autonomously...")
+                # For autonomous mode, we generate a plan but don't show it.
+                # A more advanced implementation might skip this, but it adds structure.
+                plan = st.session_state.agent.agent.generate_plan(query)
+                result = st.session_state.agent.agent.run_task_loop(query, plan=plan)
                 logging.info(f"Task finished with result: {result}")
                 st.success("Task execution finished!")
 
-            except Exception as e:
-                logging.error(f"Failed to execute task: {e}", exc_info=True)
-                st.error(f"An error occurred: {e}")
     elif run_button:
         st.warning("Please enter a query.")
