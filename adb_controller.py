@@ -10,8 +10,6 @@ class AdbController:
         self.device_id = device_id
         self.logger = logging.getLogger(__name__)
         self.width, self.height = self._get_screen_resolution()
-        self.screenshot_dir = "./screenshots"
-        os.makedirs(self.screenshot_dir, exist_ok=True)
 
     def _get_screen_resolution(self) -> tuple[int, int]:
         """Gets the device's screen resolution using ADB."""
@@ -25,7 +23,7 @@ class AdbController:
             raise RuntimeError("Could not parse screen resolution from ADB output.")
         except Exception as e:
             self.logger.warning(f"Could not get screen resolution, defaulting to 1080x2340. Error: {e}")
-            return 1080, 2340 # Default to a common resolution
+            return 1080, 2340
 
     def run_adb_command(self, command: str) -> str:
         """Executes an ADB command and returns the output."""
@@ -40,16 +38,6 @@ class AdbController:
         except subprocess.CalledProcessError as e:
             self.logger.error(f"ADB command failed: {full_command}\nError: {e.stderr}")
             raise
-
-    def capture_screenshot(self) -> str:
-        """Captures a screenshot and saves it locally."""
-        timestamp = int(time.time())
-        screenshot_path = os.path.join(self.screenshot_dir, f"screen_{timestamp}.png")
-        self.run_adb_command(f"shell screencap -p /sdcard/screen.png")
-        self.run_adb_command(f"pull /sdcard/screen.png {screenshot_path}")
-        self.run_adb_command(f"shell rm /sdcard/screen.png")
-        self.logger.info(f"Screenshot captured and saved to {screenshot_path}")
-        return screenshot_path
 
     def tap(self, x: int, y: int):
         self.run_adb_command(f"shell input tap {x} {y}")
