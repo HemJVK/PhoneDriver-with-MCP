@@ -1,7 +1,7 @@
 import logging
 import torch
 from PIL import Image
-from transformers import AutoProcessor, AutoModel
+from transformers import AutoProcessor, AutoModelForVision2Seq # Use the correct AutoModel class
 
 class VisionAnalyzer:
     """
@@ -13,14 +13,14 @@ class VisionAnalyzer:
         self.logger.info(f"Initializing VisionAnalyzer with SmolVLM on device: {self.device}")
 
         self.processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-        self.model = AutoModel.from_pretrained(
+        # Use AutoModelForVision2Seq for this architecture to get the 'generate' method
+        self.model = AutoModelForVision2Seq.from_pretrained(
             model_name,
             torch_dtype=torch.float16,
             low_cpu_mem_usage=True,
             trust_remote_code=True,
             device_map="auto"
         )
-        # The prompt for this model must contain the <image> token.
         self.prompt = (
             "<|user|>\n<image>\nYou are a concise UI description assistant. Your task is to analyze the provided screenshot of a phone screen. "
             "Identify all interactive elements like buttons, text fields, icons, and links. "
@@ -36,7 +36,6 @@ class VisionAnalyzer:
         try:
             raw_image = Image.open(screenshot_path)
 
-            # The processor expects the text prompt (with image token) and the image separately.
             inputs = self.processor(
                 text=self.prompt,
                 images=raw_image,
@@ -45,10 +44,8 @@ class VisionAnalyzer:
 
             output = self.model.generate(**inputs, max_new_tokens=1024, do_sample=False)
 
-            # The generated text will be the full conversation, so we decode it.
             generated_text = self.processor.batch_decode(output, skip_special_tokens=True)[0]
 
-            # Extract only the assistant's response.
             description = generated_text.split("<|assistant|>")[1].strip()
 
             self.logger.info(f"Screen description generated: {description}")
